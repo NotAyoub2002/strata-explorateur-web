@@ -1,0 +1,9 @@
+# Dépendances Node
+node_modules/
+
+# Variables d'environnement (SÉCURITÉ ABSOLUE)
+.env
+
+# Logs
+npm-debug.log*
+*.log
