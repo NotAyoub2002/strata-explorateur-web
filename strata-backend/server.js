@@ -182,7 +182,7 @@ app.post('/api/folders', async (req, res) => {
   }
 });
 
-// DELETE /api/folders/:id — Supprime un dossier et tout son contenu (cascade)
+// DELETE /api/folders/:id — Supprime un dossier et tout son contenu
 app.delete('/api/folders/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -345,6 +345,34 @@ app.get('/api/files/:id/download', async (req, res) => {
   }
 });
 
+// PUT /api/folders/:id — Renomme un dossier
+app.put('/api/folders/:id', async (req, res) => {
+  const { id } = req.params;
+  const { newName } = req.body;
+  
+  const { data, error } = await supabase
+      .from('folders')
+      .update({ name: newName })
+      .eq('id', id);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, data });
+});
+
+// PUT /api/files/:id — Renomme un fichier
+app.put('/api/files/:id', async (req, res) => {
+  const { id } = req.params;
+  const { newName } = req.body;
+  
+  const { data, error } = await supabase
+      .from('files')
+      .update({ name: newName })
+      .eq('id', id);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ success: true, data });
+});
+
 // Middlewares globaux
 
 app.use((req, res) => {
@@ -357,7 +385,6 @@ app.use((err, req, res, next) => {
 });
 
 // Démarrage du serveur
-
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur http://localhost:${PORT}`);
 });

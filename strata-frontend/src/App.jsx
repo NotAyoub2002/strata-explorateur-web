@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Folder, FileText, Trash2, Home, ChevronRight, UploadCloud, FolderPlus, Download } from 'lucide-react';
+import { Folder, FileText, Trash2, Home, ChevronRight, UploadCloud, FolderPlus, Download, Edit2 } from 'lucide-react';
 
 function App() {
   // États de l'application
@@ -56,7 +56,6 @@ function App() {
         })
       });
 
-      // Vérification de la réponse du serveur (Gestion des doublons)
       if (!response.ok) {
         const errorData = await response.json();
         alert(errorData.error || "Une erreur est survenue lors de la création.");
@@ -125,7 +124,31 @@ function App() {
     window.open(`http://localhost:3000/api/files/${id}/download`, '_blank');
   };
 
-  // Gestion du glisser-déposer (Drag & Drop)
+  const handleRename = async (id, type, currentName) => {
+    const newName = prompt("Entrez le nouveau nom :", currentName);
+    
+    // Validation de l'entrée
+    if (!newName || newName === currentName) return; 
+
+    try {
+      const response = await fetch(`http://localhost:3000/api/${type}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newName })
+      });
+
+      if (response.ok) {
+        loadContent(currentFolder);
+      } else {
+        const errorData = await response.json();
+        alert(`Erreur du serveur : ${errorData.error || response.statusText}`);
+      }
+    } catch (error) {
+      console.error("Erreur de connexion :", error);
+    }
+  };
+
+  // Gestion du glisser-déposer
   const onDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -261,13 +284,27 @@ function App() {
                     <Folder className="text-blue-400 mr-3 flex-shrink-0" size={24} fill="currentColor" fillOpacity={0.2} />
                     <span className="truncate text-sm font-bold text-white">{folder.name}</span>
                   </div>
-                  <button 
-                    onClick={(e) => handleDeleteFolder(folder.id, e)}
-                    className="text-red-500 hover:text-red-400 ml-4 p-2 rounded hover:bg-red-500/10 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
-                    title="Supprimer le dossier"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  
+                  {/* Actions du dossier */}
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-4">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRename(folder.id, 'folders', folder.name);
+                      }}
+                      className="text-yellow-500 hover:text-yellow-400 p-2 rounded hover:bg-yellow-500/10 transition-colors cursor-pointer"
+                      title="Renommer le dossier"
+                    >
+                      <Edit2 size={18} />
+                    </button>
+                    <button 
+                      onClick={(e) => handleDeleteFolder(folder.id, e)}
+                      className="text-red-500 hover:text-red-400 p-2 rounded hover:bg-red-500/10 transition-colors cursor-pointer"
+                      title="Supprimer le dossier"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               ))}
 
@@ -278,7 +315,19 @@ function App() {
                       <FileText className="text-gray-400 mr-3 flex-shrink-0" size={24} />
                       <span className="truncate text-sm font-medium text-gray-200" title={file.name}>{file.name}</span>
                     </div>
+                    
+                    {/* Actions du fichier */}
                     <div className="flex items-center gap-1">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRename(file.id, 'files', file.name);
+                        }}
+                        className="text-yellow-500 hover:text-yellow-400 p-1.5 rounded hover:bg-yellow-500/10 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
+                        title="Renommer le fichier"
+                      >
+                        <Edit2 size={16} />
+                      </button>
                       <button 
                         onClick={(e) => handleDownloadFile(file.id, e)}
                         className="text-blue-500 hover:text-blue-400 p-1.5 rounded hover:bg-blue-500/10 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
