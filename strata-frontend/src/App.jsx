@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Folder, FileText, Trash2, Home, ChevronRight, UploadCloud, FolderPlus, Download, Edit2 } from 'lucide-react';
+import { Folder, FileText, Trash2, Home, ChevronRight, UploadCloud, FolderPlus, Download, Edit2, Search } from 'lucide-react';
 
 function App() {
   // États de l'application
@@ -7,6 +7,7 @@ function App() {
   const [folders, setFolders] = useState([]);
   const [currentFolder, setCurrentFolder] = useState('root');
   const [history, setHistory] = useState([{ id: 'root', name: 'Racine' }]); 
+  const [searchQuery, setSearchQuery] = useState(''); // Nouvel état pour la recherche
   
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -21,6 +22,7 @@ function App() {
       setFolders(data.folders || []);
       setFiles(data.files || []);
       setCurrentFolder(folderId);
+      setSearchQuery(''); // Réinitialise la recherche quand on change de dossier
     } catch (error) {
       console.error("Erreur de connexion:", error);
     }
@@ -127,7 +129,6 @@ function App() {
   const handleRename = async (id, type, currentName) => {
     const newName = prompt("Entrez le nouveau nom :", currentName);
     
-    // Validation de l'entrée
     if (!newName || newName === currentName) return; 
 
     try {
@@ -189,6 +190,15 @@ function App() {
     });
   };
 
+  // Logique de filtrage pour la barre de recherche
+  const filteredFolders = folders.filter(folder => 
+    folder.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  const filteredFiles = files.filter(file => 
+    file.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Rendu de l'interface
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-gray-200 p-8 font-sans">
@@ -246,35 +256,62 @@ function App() {
             </div>
           )}
           
-          <div className="flex items-center flex-wrap gap-2 mb-8 relative z-20 bg-[#1a1a1a] p-3 rounded-lg border border-gray-800 text-sm">
-            {history.map((step, index) => (
-              <div key={step.id} className="flex items-center gap-2">
-                <button 
-                  onClick={() => handleJumpToHistory(index)}
-                  className={`flex items-center gap-2 transition-colors cursor-pointer ${
-                    index === history.length - 1 ? 'text-white font-medium' : 'text-gray-500 hover:text-blue-400'
-                  }`}
-                >
-                  {step.id === 'root' && <Home size={16} />}
-                  <span>{step.name}</span>
-                </button>
-                {index < history.length - 1 && <ChevronRight size={16} className="text-gray-600" />}
+          {/* Section Navigation et Recherche */}
+          <div className="flex flex-col md:flex-row gap-4 mb-8 relative z-20">
+            {/* Fil d'ariane (Breadcrumb) */}
+            <div className="flex items-center flex-wrap gap-2 bg-[#1a1a1a] p-3 rounded-lg border border-gray-800 text-sm flex-1">
+              {history.map((step, index) => (
+                <div key={step.id} className="flex items-center gap-2">
+                  <button 
+                    onClick={() => handleJumpToHistory(index)}
+                    className={`flex items-center gap-2 transition-colors cursor-pointer ${
+                      index === history.length - 1 ? 'text-white font-medium' : 'text-gray-500 hover:text-blue-400'
+                    }`}
+                  >
+                    {step.id === 'root' && <Home size={16} />}
+                    <span>{step.name}</span>
+                  </button>
+                  {index < history.length - 1 && <ChevronRight size={16} className="text-gray-600" />}
+                </div>
+              ))}
+            </div>
+
+            {/* Barre de recherche */}
+            <div className="relative md:max-w-xs w-full">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search size={18} className="text-gray-500" />
               </div>
-            ))}
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-[#1a1a1a] border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors text-sm"
+              />
+            </div>
           </div>
 
-          {files.length === 0 && folders.length === 0 ? (
+          {filteredFiles.length === 0 && filteredFolders.length === 0 ? (
             <div className="flex h-full items-center justify-center mt-32 relative z-20">
               <p className="text-gray-500 text-center flex flex-col items-center gap-3">
-                <Folder size={48} className="opacity-20" />
-                Aucun fichier ni dossier ici.<br/>
-                <span className="text-sm">Glissez-déposez un document pour commencer.</span>
+                {searchQuery ? (
+                  <>
+                    <Search size={48} className="opacity-20" />
+                    Aucun résultat pour "{searchQuery}"
+                  </>
+                ) : (
+                  <>
+                    <Folder size={48} className="opacity-20" />
+                    Aucun fichier ni dossier ici.<br/>
+                    <span className="text-sm">Glissez-déposez un document pour commencer.</span>
+                  </>
+                )}
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 relative z-20">
               
-              {folders.map(folder => (
+              {filteredFolders.map(folder => (
                 <div 
                   key={folder.id} 
                   onClick={() => handleNavigate(folder.id, folder.name)}
@@ -285,7 +322,6 @@ function App() {
                     <span className="truncate text-sm font-bold text-white">{folder.name}</span>
                   </div>
                   
-                  {/* Actions du dossier */}
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-4">
                     <button 
                       onClick={(e) => {
@@ -308,7 +344,7 @@ function App() {
                 </div>
               ))}
 
-              {files.map(file => (
+              {filteredFiles.map(file => (
                 <div key={file.id} className="p-4 border border-gray-800 rounded-lg flex flex-col bg-[#1a1a1a] hover:border-gray-600 transition-all group">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center overflow-hidden">
@@ -316,7 +352,6 @@ function App() {
                       <span className="truncate text-sm font-medium text-gray-200" title={file.name}>{file.name}</span>
                     </div>
                     
-                    {/* Actions du fichier */}
                     <div className="flex items-center gap-1">
                       <button 
                         onClick={(e) => {
